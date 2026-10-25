@@ -63,10 +63,14 @@ export function AppProvider({ children }) {
     setDemo(true);
   };
 
+  // Leaving the demo returns a signed-in user to their own account rather than signing them out.
   const signOut = async () => {
-    try { sessionStorage.removeItem(DEMO_KEY); } catch { /* storage unavailable */ }
-    setDemo(false);
-    if (user) await supabase.auth.signOut();
+    if (demo) {
+      try { sessionStorage.removeItem(DEMO_KEY); } catch { /* storage unavailable */ }
+      setDemo(false);
+      return;
+    }
+    await supabase.auth.signOut();
   };
 
   const value = {

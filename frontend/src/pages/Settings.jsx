@@ -4,11 +4,13 @@ import { CheckCircle2, Mail, TriangleAlert } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { relativeDay } from "../lib/format";
 import { Button, GoogleIcon, PageHeader, Spinner } from "../components/ui";
+import GmailNotice, { noticeDismissed } from "../components/GmailNotice";
 
 export default function Settings() {
   const { source, user, demo, signOut } = useApp();
   const [accounts, setAccounts] = useState(null);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null); // null | "info" | "connect"
   const [params, setParams] = useSearchParams();
   const gmailResult = params.get("gmail");
 
@@ -58,12 +60,27 @@ export default function Settings() {
           ))}
         </div>
 
-        <Button className="mt-4" onClick={() => run(source.connectGmail)} disabled={demo}>
+        <Button className="mt-4" disabled={demo}
+          onClick={() => (noticeDismissed() ? run(source.connectGmail) : setNotice("connect"))}>
           <GoogleIcon /> Connect a Gmail account
         </Button>
-        {demo && <p className="mt-2 text-xs text-slate-400">Connecting Gmail is disabled in the demo.</p>}
+        {demo ? (
+          <p className="mt-2 text-xs text-slate-400">Connecting Gmail is disabled in the demo.</p>
+        ) : (
+          <p className="mt-2 text-xs text-slate-500">
+            Gmail access is limited to approved testers until Google verifies the app.{" "}
+            <button className="font-medium text-brand-700 hover:underline" onClick={() => setNotice("info")}>Why?</button>
+          </p>
+        )}
         {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
       </section>
+
+      {notice && (
+        <GmailNotice
+          onClose={() => setNotice(null)}
+          onContinue={notice === "connect" ? () => run(source.connectGmail) : undefined}
+        />
+      )}
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="font-semibold text-slate-900">Account</h2>

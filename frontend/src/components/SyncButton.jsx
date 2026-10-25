@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CheckCircle2, RefreshCw, TriangleAlert } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { Button } from "./ui";
+import GmailNotice, { noticeDismissed } from "./GmailNotice";
 
 const POLL_MS = 1200;
 
@@ -10,7 +12,10 @@ export default function SyncButton() {
   const { source, refresh } = useApp();
   const [job, setJob] = useState(null);
   const [open, setOpen] = useState(false);
+  const [showNotice, setShowNotice] = useState(false);
+  const [checking, setChecking] = useState(false);
   const timer = useRef();
+  const navigate = useNavigate();
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -37,6 +42,17 @@ export default function SyncButton() {
   }
 
   async function start() {
+    // Most visitors can't connect Gmail (see GmailNotice), so explain that instead of a failed sync.
+    if (!source.demo) {
+      setChecking(true);
+      const accounts = await source.listAccounts().catch(() => null);
+      setChecking(false);
+      if (accounts?.length === 0) {
+        if (noticeDismissed()) navigate("/settings");
+        else setShowNotice(true);
+        return;
+      }
+    }
     setOpen(true);
     try {
       setJob(await source.startSync());
@@ -50,8 +66,9 @@ export default function SyncButton() {
 
   return (
     <div className="relative">
-      <Button variant="primary" onClick={running ? () => setOpen((o) => !o) : start}>
-        <RefreshCw size={15} className={running ? "animate-spin" : ""} />
+      {showNotice && <GmailNotice onClose={() => setShowNotice(false)} onContinue={() => navigate("/settings")} />}
+      <Button variant="primary" disabled={checking} onClick={running ? () => setOpen((o) => !o) : start}>
+        <RefreshCw size={15} className={running || checking ? "animate-spin" : ""} />
         <span className="hidden sm:inline">{running ? "Syncing…" : "Sync Gmail"}</span>
       </Button>
 
